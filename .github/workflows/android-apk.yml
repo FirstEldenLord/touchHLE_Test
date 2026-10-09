@@ -26,23 +26,18 @@ jobs:
       - name: Set up Java
         uses: actions/setup-java@v4
         with:
-      - name: Accept Android SDK licenses
-        run: |
-          sdkmanager --licenses </dev/null || true
-          yes | sdkmanager --licenses
-
-      - name: Install Android SDK packages
-        run: |
-          sdkmanager "platform-tools" "platforms;android-31" "build-tools;35.0.0"          distribution: temurin
+          distribution: temurin
           java-version: '21'
 
       - name: Set up Android SDK
         uses: android-actions/setup-android@v3
 
+      - name: Accept Android SDK licenses
+        run: yes | sdkmanager --licenses
+
       - name: Install Android SDK packages
         run: |
-          yes | sdkmanager --licenses
-          sdkmanager "platform-tools" "platforms;android-31" "build-tools;35.0.0"
+          sdkmanager "platform-tools" "platforms;android-31" "build-tools;35.0.0" "ndk;25.2.9519653"
 
       - name: Install Rust and Android target
         uses: dtolnay/rust-toolchain@stable
@@ -67,23 +62,13 @@ jobs:
           tar -xzf cmake.tar.gz -C vendor
           mv vendor/cmake-3.31.6-linux-x86_64 vendor/cmake
 
-      - name: Install Android NDK r25c
-        run: |
-          curl -L --fail -o android-ndk.zip \
-            https://dl.google.com/android/repository/android-ndk-r25c-linux.zip
-          mkdir -p android-ndk
-          7z x android-ndk.zip -oandroid-ndk -snld
-          mkdir -p "$ANDROID_HOME/ndk"
-          ln -s "$GITHUB_WORKSPACE/android-ndk/android-ndk-r25c" \
-            "$ANDROID_HOME/ndk/25.2.9519653"
-
       - name: Configure Android project
         run: |
           echo "sdk.dir=$ANDROID_HOME" > android/local.properties
 
       - name: Build debug APK
         working-directory: android
-        run: ../gradle/gradle-8.11.1/bin/gradle assembleDebug
+        run: gradle --no-daemon assembleDebug
         env:
           ANDROID_NDK: ${{ env.ANDROID_HOME }}/ndk/25.2.9519653
           ANDROID_NDK_HOME: ${{ env.ANDROID_HOME }}/ndk/25.2.9519653
