@@ -26,7 +26,14 @@ jobs:
       - name: Set up Java
         uses: actions/setup-java@v4
         with:
-          distribution: temurin
+      - name: Accept Android SDK licenses
+        run: |
+          sdkmanager --licenses </dev/null || true
+          yes | sdkmanager --licenses
+
+      - name: Install Android SDK packages
+        run: |
+          sdkmanager "platform-tools" "platforms;android-31" "build-tools;35.0.0"          distribution: temurin
           java-version: '21'
 
       - name: Set up Android SDK
