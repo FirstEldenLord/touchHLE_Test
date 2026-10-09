@@ -244,6 +244,39 @@ pub const CLASSES: ClassExports = objc_classes! {
                 let responds: bool = msg![env; delegate respondsToSelector:sel];
                 assert!(!responds); // TODO
             }
+            Event::GeneralRef(e) => {
+                let name = e.decode().unwrap().to_string();
+                let text: String = match name.as_str() {
+                    "amp" => "&".to_string(),
+                    "lt" => "<".to_string(),
+                    "gt" => ">".to_string(),
+                    "quot" => "\"".to_string(),
+                    "apos" => "'".to_string(),
+                    n if n.starts_with("#x") || n.starts_with("#X") => {
+                        u32::from_str_radix(&n[2..], 16)
+                            .ok()
+                            .and_then(char::from_u32)
+                            .map(|c| c.to_string())
+                            .unwrap_or_else(|| format!("&{};", n))
+                    }
+                    n if n.starts_with('#') => n[1..]
+                        .parse::<u32>()
+                        .ok()
+                        .and_then(char::from_u32)
+                        .map(|c| c.to_string())
+                        .unwrap_or_else(|| format!("&{};", n)),
+                    n => format!("&{};", n),
+                };
+                let sel: SEL = env
+                    .objc
+                    .register_host_selector("parser:foundCharacters:".to_string(), &mut env.mem);
+                let responds: bool = msg![env; delegate respondsToSelector:sel];
+                if responds {
+                    let chars = from_rust_string(env, text);
+                    let chars = autorelease(env, chars);
+                    () = msg![env; delegate parser:this foundCharacters:chars];
+                }
+            }
             e => unimplemented!("{:?}", e)
         }
     }
