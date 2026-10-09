@@ -241,6 +241,7 @@ impl super::ObjC {
 
     /// Get a reference to a host object and downcast it. Panics if there is
     /// no such object, or if downcasting fails.
+    #[track_caller]
     pub fn borrow<T: AnyHostObject + 'static>(&self, object: id) -> &T {
         let mut host_object: &(dyn AnyHostObject + 'static) =
             &*self
@@ -270,21 +271,19 @@ impl super::ObjC {
 
     /// Get a reference to a host object and downcast it. Panics if there is
     /// no such object, or if downcasting fails.
+    #[track_caller]
     pub fn borrow_mut<T: AnyHostObject + 'static>(&mut self, object: id) -> &mut T {
         // Rust's borrow checker struggles with loops like this which descend
         // through a data structure with a mutable borrow. The unsafe code is
         // used to bypass the borrow checker.
         type Aho = dyn AnyHostObject + 'static;
-        let mut host_object: &mut Aho = &mut *self
-            .objects
-            .get_mut(&object)
-            .unwrap_or_else(|| {
-                panic!(
-                    "borrow_mut::<{}>: no host object for {object:?}",
-                    std::any::type_name::<T>()
-                )
-            })
-            .host_object;
+        let mut host_object: &mut Aho = match self.objects.get_mut(&object) {
+            Some(entry) => &mut *entry.host_object,
+            None => panic!(
+                "borrow_mut::<{}>: no host object for {object:?}",
+                std::any::type_name::<T>()
+            ),
+        };
         loop {
             if let Some(res) = unsafe { &mut *(host_object as *mut Aho) }
                 .as_any_mut()
