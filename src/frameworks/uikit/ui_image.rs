@@ -131,6 +131,7 @@ pub const CLASSES: ClassExports = objc_classes! {
 }
 
 - (id)initWithData:(id)data { // NSData*
+    if data == nil { () = msg![env; this release]; return nil; }
     let slice = ns_data::to_rust_slice(env, data);
     // TODO: refactor common parts
     let image = Image::from_bytes(slice).unwrap();

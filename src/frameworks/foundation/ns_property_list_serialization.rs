@@ -59,6 +59,7 @@ pub const CLASSES: ClassExports = objc_classes! {
           mutabilityOption:(NSPropertyListMutabilityOptions)opt
                     format:(MutPtr<NSPropertyListFormat>)format
           errorDescription:(MutPtr<id>)error_string { // NSString **
+    if data == nil { return nil; }
     let slice = ns_data::to_rust_slice(env, data);
 
     if let Ok(root) = Value::from_reader_xml(Cursor::new(slice)) {
