@@ -243,7 +243,16 @@ impl super::ObjC {
     /// no such object, or if downcasting fails.
     pub fn borrow<T: AnyHostObject + 'static>(&self, object: id) -> &T {
         let mut host_object: &(dyn AnyHostObject + 'static) =
-            &*self.objects.get(&object).unwrap().host_object;
+            &*self
+    .objects
+    .get(&object)
+    .unwrap_or_else(|| {
+        panic!(
+            "borrow::<{}>: no host object for {object:?}",
+            std::any::type_name::<T>()
+        )
+    })
+    .host_object;
         loop {
             if let Some(res) = host_object.as_any().downcast_ref() {
                 return res;
