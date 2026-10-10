@@ -152,6 +152,10 @@ pub const CLASSES: ClassExports = objc_classes! {
     autorelease(env, new)
 }
 
+- (CGFloat)pointSize {
+    env.objc.borrow::<UIFontHostObject>(this).size
+}
+
 - (id)fontName { // NSString*
     let name = env.objc.borrow::<UIFontHostObject>(this).name.clone();
     let res = crate::frameworks::foundation::ns_string::from_rust_string(env, name);
