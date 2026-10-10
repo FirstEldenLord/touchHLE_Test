@@ -168,7 +168,7 @@ pub const CLASSES: ClassExports = objc_classes! {
 - (id)pathForResource:(id)name // NSString*
                ofType:(id)extension // NSString*
           inDirectory:(id)directory { // NSString*
-    assert!(name != nil); // TODO
+    if name == nil { return nil; } // TODO
 
     // TODO: cache result of lookups
 
