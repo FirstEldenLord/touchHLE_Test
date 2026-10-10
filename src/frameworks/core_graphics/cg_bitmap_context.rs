@@ -230,7 +230,10 @@ fn bytes_per_pixel(data: &CGBitmapContextData) -> GuestUSize {
     match color_space {
         kCGColorSpaceGenericRGB => components_for_rgb(alpha_info).unwrap(),
         kCGColorSpaceGenericGray => components_for_gray(alpha_info).unwrap(),
-        _ => unimplemented!("support other color spaces"),
+        kCGColorSpaceGenericRGB => components_for_rgb(alpha_info).unwrap(),
+        kCGColorSpaceGenericGray => components_for_gray(alpha_info).unwrap(),
+        _ if alpha_info == kCGImageAlphaOnly => 1,
+            _ => unimplemented!("support other color spaces"),
     }
 }
 
