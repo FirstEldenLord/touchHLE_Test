@@ -70,7 +70,10 @@ pub fn CGBitmapContextCreate(
         match color_space {
             kCGColorSpaceGenericRGB => components_for_rgb(bitmap_info).unwrap(),
             kCGColorSpaceGenericGray => components_for_gray(bitmap_info).unwrap(),
-            _ => unimplemented!("support other color spaces"),
+            _ => unimplemented!(
+                "unsupported bitmap color space: name={:?}, bitmap_info={:#x}, width={}, height={}, bits_per_component={}, bytes_per_row={}",
+                color_space, bitmap_info, width, height, bits_per_component, bytes_per_row
+            ),
         }
     };
 
