@@ -38,6 +38,37 @@ pub const CLASSES: ClassExports = objc_classes! {
 
 };
 
+fn CGFontCreateWithFontName(env: &mut Environment, name: id) -> CGFontRef {
+    let lower = crate::frameworks::foundation::ns_string::to_rust_string(env, name).to_lowercase();
+    let bold = lower.contains("bold");
+    let italic = lower.contains("italic") || lower.contains("oblique");
+    let font = if lower.contains("courier") || lower.contains("mono") {
+        match (bold, italic) {
+            (false, false) => Font::mono_regular(),
+            (true, false) => Font::mono_bold(),
+            (false, true) => Font::mono_italic(),
+            (true, true) => Font::mono_bold_italic(),
+        }
+    } else if lower.contains("times") || lower.contains("georgia") || lower.contains("serif") {
+        match (bold, italic) {
+            (false, false) => Font::serif_regular(),
+            (true, false) => Font::serif_bold(),
+            (false, true) => Font::serif_italic(),
+            (true, true) => Font::serif_bold_italic(),
+        }
+    } else {
+        match (bold, italic) {
+            (false, false) => Font::sans_regular(),
+            (true, false) => Font::sans_bold(),
+            (false, true) => Font::sans_italic(),
+            (true, true) => Font::sans_bold_italic(),
+        }
+    };
+    let host_obj = Box::new(CGFontHostObject { font });
+    let class = env.objc.get_known_class("_touchHLE_CGFont", &mut env.mem);
+    env.objc.alloc_object(class, host_obj, &mut env.mem)
+}
+
 fn CGFontCreateWithDataProvider(env: &mut Environment, provider: CGDataProviderRef) -> CGFontRef {
     let bytes = cg_data_provider::borrow_bytes(env, provider);
     let font = Font::from_vec(bytes.to_vec());
@@ -185,6 +216,7 @@ fn CGFontGetNumberOfGlyphs(env: &mut Environment, font: CGFontRef) -> GuestUSize
 }
 
 pub const FUNCTIONS: FunctionExports = &[
+    export_c_func!(CGFontCreateWithFontName(_)),
     export_c_func!(CGFontCreateWithDataProvider(_)),
     export_c_func!(CGFontRetain(_)),
     export_c_func!(CGFontRelease(_)),
