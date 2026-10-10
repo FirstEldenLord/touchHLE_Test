@@ -104,6 +104,23 @@ fn CFDictionaryGetValue(
     res.cast().cast_const()
 }
 
+fn CFDictionaryGetValueIfPresent(
+    env: &mut Environment,
+    dict: CFDictionaryRef,
+    key: ConstVoidPtr,
+    value: crate::mem::MutPtr<ConstVoidPtr>,
+) -> bool {
+    let key: id = key.cast().cast_mut();
+    let res: id = msg![env; dict objectForKey:key];
+    if res == nil {
+        return false;
+    }
+    if !value.is_null() {
+        env.mem.write(value, res.cast().cast_const());
+    }
+    true
+}
+
 fn CFDictionaryGetCount(env: &mut Environment, dict: CFDictionaryRef) -> CFIndex {
     let count: NSUInteger = msg![env; dict count];
     log_dbg!("CFDictionaryGetCount dict {:?} {}", dict, count);
@@ -263,6 +280,7 @@ pub const FUNCTIONS: FunctionExports = &[
     export_c_func!(CFDictionaryRemoveValue(_, _)),
     export_c_func!(CFDictionaryRemoveAllValues(_)),
     export_c_func!(CFDictionaryGetValue(_, _)),
+    export_c_func!(CFDictionaryGetValueIfPresent(_, _, _)),
     export_c_func!(CFDictionaryGetCount(_)),
     export_c_func!(CFDictionaryGetKeysAndValues(_, _, _)),
 ];
