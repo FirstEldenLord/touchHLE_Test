@@ -72,6 +72,13 @@ pub const CLASSES: ClassExports = objc_classes! {
     retain(env, this)
 }
 
+// NSMutableCopying implementation
+- (id)mutableCopyWithZone:(NSZonePtr)_zone {
+    let objects: id = msg![env; this allObjects];
+    let new: id = msg_class![env; NSMutableSet alloc];
+    msg![env; new initWithArray:objects]
+}
+
 - (bool)containsObject:(id)object {
     let enumerator: id = msg![env; this objectEnumerator];
     loop {

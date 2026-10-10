@@ -204,16 +204,6 @@ fn objc_msgSend_inner(
         if class == nil {
             assert!(class != orig_class);
 
-            {
-                let mut chain = String::new();
-                let mut c = orig_class;
-                while c != nil {
-                    let h: &super::ClassHostObject = env.objc.borrow(c);
-                    chain.push_str(&format!("{} -> ", h.name));
-                    c = h.superclass;
-                }
-                eprintln!("CLASS CHAIN: {}nil", chain);
-            }
             let class_host_object = env.objc.get_host_object(orig_class).unwrap();
             let &super::ClassHostObject {
                 ref name,
