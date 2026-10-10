@@ -1796,7 +1796,15 @@ pub fn from_u16_vec(env: &mut Environment, from: Vec<u16>) -> id {
 /// TODO: Try to avoid allocating a new String in more cases.
 ///
 /// TODO: Try to avoid converting from UTF-16 in more cases.
+#[track_caller]
 pub fn to_rust_string(env: &mut Environment, string: id) -> Cow<'static, str> {
+    if string == nil {
+        eprintln!(
+            "WARNING: to_rust_string called with nil at {}",
+            std::panic::Location::caller()
+        );
+        return Cow::Borrowed("");
+    }
     // TODO: handle foreign subclasses of NSString
     env.objc
         .borrow_mut::<StringHostObject>(string)
