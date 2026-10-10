@@ -67,7 +67,7 @@ pub const CLASSES: ClassExports = objc_classes! {
 }
 
 + (u32)instanceMethodForSelector:(SEL)sel {
-    match env.objc.object_get_guest_imp_addr(&env.mem, this, sel) {
+    match env.objc.class_get_guest_imp_addr(this, sel) {
         Some(addr) => addr,
         None => panic!(
             "instanceMethodForSelector: no guest implementation found for class {:?}",

@@ -240,6 +240,26 @@ impl ObjC {
         }
     }
 
+    /// Returns a guest implementation address for a method in a class hierarchy.
+    pub fn class_get_guest_imp_addr(&self, class: Class, sel: SEL) -> Option<u32> {
+        let mut class = class;
+        loop {
+            let &ClassHostObject {
+                superclass,
+                ref methods,
+                ..
+            } = self.borrow(class);
+
+            if let Some(IMP::Guest(guest_imp)) = methods.get(&sel) {
+                return Some(guest_imp.addr_with_thumb_bit());
+            } else if superclass == nil {
+                return None;
+            } else {
+                class = superclass;
+            }
+        }
+    }
+
     /// Returns the address of a guest method implementation for an object, if
     /// the method exists and is implemented by the guest app.
     pub fn object_get_guest_imp_addr(&self, mem: &Mem, obj: id, sel: SEL) -> Option<u32> {
