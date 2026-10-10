@@ -60,6 +60,7 @@ enum FontKind {
 }
 
 struct UIFontHostObject {
+    name: String,
     size: CGFloat,
     kind: FontKind,
 }
@@ -111,6 +112,7 @@ pub const CLASSES: ClassExports = objc_classes! {
 
 + (id)systemFontOfSize:(CGFloat)size {
     let host_object = UIFontHostObject {
+        name: "Helvetica".to_string(),
         size,
         kind: FontKind::SansRegular,
     };
@@ -119,6 +121,7 @@ pub const CLASSES: ClassExports = objc_classes! {
 }
 + (id)boldSystemFontOfSize:(CGFloat)size {
     let host_object = UIFontHostObject {
+        name: "Helvetica-Bold".to_string(),
         size,
         kind: FontKind::SansBold,
     };
@@ -127,6 +130,7 @@ pub const CLASSES: ClassExports = objc_classes! {
 }
 + (id)italicSystemFontOfSize:(CGFloat)size {
     let host_object = UIFontHostObject {
+        name: "Helvetica-Oblique".to_string(),
         size,
         kind: FontKind::SansItalic,
     };
@@ -137,6 +141,7 @@ pub const CLASSES: ClassExports = objc_classes! {
             size:(CGFloat)fontSize {
     let font_name = to_rust_string(env, fontName).to_string();
     let host_object = UIFontHostObject {
+        name: font_name.clone(),
         kind: get_equivalent_font(&font_name).unwrap_or_else(|| {
             log!("No replacement found for font {}. Using system font instead.", font_name);
             FontKind::SansRegular
@@ -145,6 +150,12 @@ pub const CLASSES: ClassExports = objc_classes! {
     };
     let new = env.objc.alloc_object(this, Box::new(host_object), &mut env.mem);
     autorelease(env, new)
+}
+
+- (id)fontName { // NSString*
+    let name = env.objc.borrow::<UIFontHostObject>(this).name.clone();
+    let res = crate::frameworks::foundation::ns_string::from_rust_string(env, name);
+    autorelease(env, res)
 }
 
 - (CGFloat)ascender {
