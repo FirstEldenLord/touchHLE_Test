@@ -51,6 +51,12 @@ pub fn CGBitmapContextCreate(
 ) -> CGContextRef {
     assert!(bits_per_component == 8); // TODO: support other bit depths
 
+    if color_space.is_null() {
+        panic!(
+            "CGBitmapContextCreate received null color space: width={}, height={}, bits_per_component={}, bytes_per_row={}, bitmap_info={:#x}, data_is_null={}",
+            width, height, bits_per_component, bytes_per_row, bitmap_info, data.is_null()
+        );
+    }
     let color_space = env.objc.borrow::<CGColorSpaceHostObject>(color_space).name;
 
     let component_count = match color_space {
