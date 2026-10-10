@@ -66,6 +66,16 @@ pub const CLASSES: ClassExports = objc_classes! {
     env.objc.class_has_method(this, selector)
 }
 
++ (u32)instanceMethodForSelector:(SEL)sel {
+    match env.objc.object_get_guest_imp_addr(&env.mem, this, sel) {
+        Some(addr) => addr,
+        None => panic!(
+            "instanceMethodForSelector: no guest implementation found for class {:?}",
+            this
+        ),
+    }
+}
+
 + (())cancelPreviousPerformRequestsWithTarget:(id)target selector:(SEL)selector object:(id)arg {
     let run_loop: id = msg_class![env; NSRunLoop currentRunLoop];
     cancel_perform_requests(env, run_loop, target, selector, arg);
