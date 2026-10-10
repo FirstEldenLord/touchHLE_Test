@@ -69,12 +69,11 @@ pub fn CGBitmapContextCreate(
         let data = env.mem.alloc(total_size);
         (data, true, bytes_per_row)
     } else {
-        if bytes_per_row == 0 {
-            panic!(
-                "CGBitmapContextCreate: bytes_per_row=0 with external data buffer; width={}, height={}, bits_per_component={}, bitmap_info={:#x}, component_count={}",
-                width, height, bits_per_component, bitmap_info, component_count
-            );
-        }
+        let bytes_per_row = if bytes_per_row == 0 {
+            width.checked_mul(component_count).unwrap()
+        } else {
+            bytes_per_row
+        };
         (data, false, bytes_per_row)
     };
 
