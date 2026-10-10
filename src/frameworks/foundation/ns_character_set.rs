@@ -101,6 +101,18 @@ pub const CLASSES: ClassExports = objc_classes! {
     autorelease(env, new)
 }
 
++ (id)alphanumericCharacterSet {
+    let mut set: HashSet<unichar> = HashSet::new();
+    for c in ('a'..='z').chain('A'..='Z').chain('0'..='9') {
+        set.insert(c as unichar);
+    }
+
+    let new: id = msg![env; this alloc];
+    env.objc.borrow_mut::<CharacterSetHostObject>(new).set = set;
+
+    autorelease(env, new)
+}
+
 + (id)whitespaceCharacterSet {
     let set = HashSet::from(WHITESPACE_CHARACTERS.map(|c| unichar::try_from(c).unwrap()));
 
