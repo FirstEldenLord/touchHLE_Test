@@ -248,6 +248,16 @@ forUndefinedKey:(id)key { // NSString*
     log_once!("TODO: NSObject didChangeValueForKey:");
 }
 
+- (u32)methodForSelector:(SEL)sel {
+    match env.objc.object_get_guest_imp_addr(&env.mem, this, sel) {
+        Some(addr) => addr,
+        None => panic!(
+            "methodForSelector: no guest implementation found for object {:?}",
+            this
+        ),
+    }
+}
+
 - (bool)respondsToSelector:(SEL)selector {
     env.objc.object_has_method(&env.mem, this, selector)
 }

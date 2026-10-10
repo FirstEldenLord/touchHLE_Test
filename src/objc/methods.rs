@@ -240,6 +240,29 @@ impl ObjC {
         }
     }
 
+    /// Returns the address of a guest method implementation for an object, if
+    /// the method exists and is implemented by the guest app.
+    pub fn object_get_guest_imp_addr(&self, mem: &Mem, obj: id, sel: SEL) -> Option<u32> {
+        let mut class = ObjC::read_isa(obj, mem);
+        loop {
+            let &ClassHostObject {
+                superclass,
+                ref methods,
+                ..
+            } = self.borrow(class);
+            if let Some(imp) = methods.get(&sel) {
+                return match imp {
+                    IMP::Guest(g) => Some(g.addr_with_thumb_bit()),
+                    IMP::Host(_) => None,
+                };
+            } else if superclass == nil {
+                return None;
+            } else {
+                class = superclass;
+            }
+        }
+    }
+
     /// Checks if a given object has a method (responds to a selector).
     pub fn object_has_method(&self, mem: &Mem, obj: id, sel: SEL) -> bool {
         self.class_has_method(ObjC::read_isa(obj, mem), sel)
