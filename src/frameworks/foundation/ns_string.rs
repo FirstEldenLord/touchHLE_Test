@@ -561,6 +561,36 @@ pub const CLASSES: ClassExports = objc_classes! {
     NSRange { location: NSNotFound as NSUInteger, length: 0 }
 }
 
+- (NSRange)rangeOfCharacterFromSet:(id)set
+                  options:(NSStringCompareOptions)options
+                    range:(NSRange)search_range {
+    let length: NSUInteger = msg![env; this length];
+    let start = search_range.location;
+    let end = start.saturating_add(search_range.length).min(length);
+
+    if start >= length || start >= end {
+        return NSRange { location: NSNotFound as NSUInteger, length: 0 };
+    }
+
+    if options & NSBackwardsSearch != 0 {
+        for idx in (start..end).rev() {
+            let c: u16 = msg![env; this characterAtIndex:idx];
+            if msg![env; set characterIsMember:c] {
+                return NSRange { location: idx, length: 1 };
+            }
+        }
+    } else {
+        for idx in start..end {
+            let c: u16 = msg![env; this characterAtIndex:idx];
+            if msg![env; set characterIsMember:c] {
+                return NSRange { location: idx, length: 1 };
+            }
+        }
+    }
+
+    NSRange { location: NSNotFound as NSUInteger, length: 0 }
+}
+
 - (id)description {
     this
 }
