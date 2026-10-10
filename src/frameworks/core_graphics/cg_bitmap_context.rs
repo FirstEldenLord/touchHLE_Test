@@ -335,6 +335,7 @@ fn pixel_offsets(data: &CGBitmapContextData) -> (usize, usize, usize, Option<usi
                 _ => unreachable!(), // checked by bytes_per_pixel
             }
         }
+        _ if data.alpha_info == kCGImageAlphaOnly => (0, 0, 0, Some(0)),
         _ => unimplemented!(),
     }
 }
