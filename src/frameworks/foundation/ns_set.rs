@@ -124,7 +124,9 @@ pub const CLASSES: ClassExports = objc_classes! {
 
 // NSCopying implementation
 - (id)copyWithZone:(NSZonePtr)_zone {
-    todo!(); // TODO: this should produce an immutable copy
+    let objects: id = msg![env; this allObjects];
+    let new: id = msg_class![env; NSSet alloc];
+    msg![env; new initWithArray:objects]
 }
 
 @end
