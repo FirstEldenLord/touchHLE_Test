@@ -56,6 +56,10 @@ pub const CLASSES: ClassExports = objc_classes! {
 
 @implementation AVAudioPlayer: NSObject
 
+- (id)url { // NSURL*
+    env.objc.borrow::<AVAudioPlayerHostObject>(this).audio_file_url
+}
+
 + (id)allocWithZone:(NSZonePtr)_zone {
     let symb = "__touchHLE_AVAudioPlayerOutputBufferHelper";
     let hf: HostFunction = &(_touchHLE_AVAudioPlayerOutputBufferHelper as fn(&mut Environment, _, _, _) -> _);
