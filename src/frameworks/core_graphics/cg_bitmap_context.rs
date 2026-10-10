@@ -51,18 +51,27 @@ pub fn CGBitmapContextCreate(
 ) -> CGContextRef {
     assert!(bits_per_component == 8); // TODO: support other bit depths
 
-    if color_space.is_null() {
-        panic!(
-            "CGBitmapContextCreate received null color space: width={}, height={}, bits_per_component={}, bytes_per_row={}, bitmap_info={:#x}, data_is_null={}",
-            width, height, bits_per_component, bytes_per_row, bitmap_info, data.is_null()
+    let alpha_info = bitmap_info & kCGBitmapAlphaInfoMask;
+    let color_space = if color_space.is_null() && alpha_info == kCGImageAlphaOnly {
+        // Alpha-only bitmap masks have one byte per pixel and need no color space.
+        ""
+    } else {
+        assert!(
+            !color_space.is_null(),
+            "CGBitmapContextCreate received null color space for bitmap_info={:#x}",
+            bitmap_info
         );
-    }
-    let color_space = env.objc.borrow::<CGColorSpaceHostObject>(color_space).name;
+        env.objc.borrow::<CGColorSpaceHostObject>(color_space).name
+    };
 
-    let component_count = match color_space {
-        kCGColorSpaceGenericRGB => components_for_rgb(bitmap_info).unwrap(),
-        kCGColorSpaceGenericGray => components_for_gray(bitmap_info).unwrap(),
-        _ => unimplemented!("support other color spaces"),
+    let component_count = if alpha_info == kCGImageAlphaOnly {
+        1
+    } else {
+        match color_space {
+            kCGColorSpaceGenericRGB => components_for_rgb(bitmap_info).unwrap(),
+            kCGColorSpaceGenericGray => components_for_gray(bitmap_info).unwrap(),
+            _ => unimplemented!("support other color spaces"),
+        }
     };
 
     let (data, data_is_owned, bytes_per_row) = if data.is_null() {
