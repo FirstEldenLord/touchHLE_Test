@@ -25,8 +25,6 @@ use crate::objc::nil;
 use crate::Environment;
 
 use std::slice::from_raw_parts;
-use std::sync::{Mutex, OnceLock};
-use std::time::Instant;
 
 // These types are the same size in guest code (32-bit) and host code (64-bit).
 use crate::gles::gles11_raw::types::{
@@ -156,7 +154,6 @@ fn glGetError(env: &mut Environment) -> GLenum {
     })
 }
 fn glEnable(env: &mut Environment, cap: GLenum) {
-    gl_trace(format!("Enable {:#x}", cap));
     with_ctx_and_mem(env, |gles, _mem| {
         unsafe { gles.Enable(cap) };
     });
@@ -165,7 +162,6 @@ fn glIsEnabled(env: &mut Environment, cap: GLenum) -> GLboolean {
     with_ctx_and_mem(env, |gles, _mem| unsafe { gles.IsEnabled(cap) })
 }
 fn glDisable(env: &mut Environment, cap: GLenum) {
-    gl_trace(format!("Disable {:#x}", cap));
     with_ctx_and_mem(env, |gles, _mem| {
         unsafe { gles.Disable(cap) };
     });
@@ -301,42 +297,13 @@ fn glGetString(env: &mut Environment, name: GLenum) -> ConstPtr<GLubyte> {
 }
 
 // Other state manipulation
-static GL_TRACE_START: OnceLock<Instant> = OnceLock::new();
-static GL_TRACE: Mutex<Vec<(String, u64, u32)>> = Mutex::new(Vec::new());
-
-/// Temporary debugging aid: records unique GL state calls and panics with a
-/// summary after 90 seconds, so the result is visible on the crash screen.
-fn gl_trace(line: String) {
-    let start = *GL_TRACE_START.get_or_init(Instant::now);
-    let now = start.elapsed().as_secs();
-    let mut v = GL_TRACE.lock().unwrap();
-    if let Some(e) = v.iter_mut().find(|e| e.0 == line) {
-        e.1 = now;
-        e.2 += 1;
-    } else {
-        v.push((line, now, 1));
-    }
-    if now >= 1_000_000 {
-        let mut items = v.clone();
-        drop(v);
-        items.sort_by(|a, b| b.1.cmp(&a.1));
-        let mut msg = String::from("GL TRACE (state | seconds ago | count):");
-        for (l, t, c) in items.iter().filter(|e| e.0.starts_with("TEX ")).take(30).chain(items.iter().filter(|e| !e.0.starts_with("TEX ") && !e.0.starts_with("Scissor")).take(30)) {
-            msg.push_str(&format!("\n{} | {}s ago | x{}", l, now - t, c));
-        }
-        panic!("{}", msg);
-    }
-}
-
 fn glAlphaFunc(env: &mut Environment, func: GLenum, ref_: GLclampf) {
-    gl_trace(format!("AlphaFunc func={:#x} ref={}", func, ref_));
     with_ctx_and_mem(env, |gles, _mem| unsafe { gles.AlphaFunc(func, ref_) })
 }
 fn glAlphaFuncx(env: &mut Environment, func: GLenum, ref_: GLclampx) {
     with_ctx_and_mem(env, |gles, _mem| unsafe { gles.AlphaFuncx(func, ref_) })
 }
 fn glBlendFunc(env: &mut Environment, sfactor: GLenum, dfactor: GLenum) {
-    gl_trace(format!("BlendFunc src={:#x} dst={:#x}", sfactor, dfactor));
     with_ctx_and_mem(env, |gles, _mem| unsafe {
         gles.BlendFunc(sfactor, dfactor)
     })
@@ -351,7 +318,6 @@ fn glColorMask(
     blue: GLboolean,
     alpha: GLboolean,
 ) {
-    gl_trace(format!("ColorMask {} {} {} {}", red, green, blue, alpha));
     with_ctx_and_mem(env, |gles, _mem| unsafe {
         gles.ColorMask(red, green, blue, alpha)
     })
@@ -372,19 +338,15 @@ fn glCullFace(env: &mut Environment, mode: GLenum) {
     with_ctx_and_mem(env, |gles, _mem| unsafe { gles.CullFace(mode) })
 }
 fn glDepthFunc(env: &mut Environment, func: GLenum) {
-    gl_trace(format!("DepthFunc func={:#x}", func));
     with_ctx_and_mem(env, |gles, _mem| unsafe { gles.DepthFunc(if func == 0x204 { 0x206 } else { func }) })
 }
 fn glDepthMask(env: &mut Environment, flag: GLboolean) {
-    gl_trace(format!("DepthMask flag={:#x}", flag));
     with_ctx_and_mem(env, |gles, _mem| unsafe { gles.DepthMask(flag) })
 }
 fn glDepthRangef(env: &mut Environment, near: GLclampf, far: GLclampf) {
-    gl_trace(format!("DepthRangef near={:?} far={:?}", near, far));
     with_ctx_and_mem(env, |gles, _mem| unsafe { gles.DepthRangef(near, far) })
 }
 fn glDepthRangex(env: &mut Environment, near: GLclampx, far: GLclampx) {
-    gl_trace(format!("DepthRangex near={:#x} far={:#x}", near, far));
     with_ctx_and_mem(env, |gles, _mem| unsafe { gles.DepthRangex(near, far) })
 }
 fn glFrontFace(env: &mut Environment, mode: GLenum) {
@@ -414,7 +376,6 @@ fn glShadeModel(env: &mut Environment, mode: GLenum) {
     with_ctx_and_mem(env, |gles, _mem| unsafe { gles.ShadeModel(mode) })
 }
 fn glScissor(env: &mut Environment, x: GLint, y: GLint, width: GLsizei, height: GLsizei) {
-    gl_trace(format!("Scissor x={:#x} y={:#x} width={:#x} height={:#x}", x, y, width, height));
     // apply scale hack: assume framebuffer's size is larger than the app thinks
     // and scale scissor appropriately
     let factor = env.options.scale_hack.get() as GLsizei;
@@ -784,7 +745,6 @@ fn glDrawElements(
 
 // Clearing
 fn glClear(env: &mut Environment, mask: GLbitfield) {
-    gl_trace(format!("Clear mask={:#x}", mask));
     with_ctx_and_mem(env, |gles, _mem| unsafe { gles.Clear(mask) });
 }
 fn glClearColor(
@@ -810,11 +770,9 @@ fn glClearColorx(
     });
 }
 fn glClearDepthf(env: &mut Environment, depth: GLclampf) {
-    gl_trace(format!("ClearDepthf depth={:?}", depth));
     with_ctx_and_mem(env, |gles, _mem| unsafe { gles.ClearDepthf(depth) });
 }
 fn glClearDepthx(env: &mut Environment, depth: GLclampx) {
-    gl_trace(format!("ClearDepthx depth={:#x}", depth));
     with_ctx_and_mem(env, |gles, _mem| unsafe { gles.ClearDepthx(depth) });
 }
 fn glClearStencil(env: &mut Environment, s: GLint) {
@@ -1095,7 +1053,6 @@ fn glTexImage2D(
     type_: GLenum,
     pixels: ConstVoidPtr,
 ) {
-    gl_trace(format!("TEX TexImage2D target={:#x} format={:#x} type_={:#x}", target, format, type_));
     with_ctx_and_mem(env, |gles, mem| unsafe {
         let pixels = if pixels.is_null() {
             std::ptr::null()
@@ -1153,7 +1110,6 @@ fn glCompressedTexImage2D(
     image_size: GLsizei,
     data: ConstVoidPtr,
 ) {
-    gl_trace(format!("TEX CompressedTexImage2D target={:#x} internalformat={:#x}", target, internalformat));
     with_ctx_and_mem(env, |gles, mem| unsafe {
         let data = mem
             .ptr_at(data.cast::<u8>(), image_size.try_into().unwrap())
@@ -1201,19 +1157,16 @@ fn glCopyTexSubImage2D(
     })
 }
 fn glTexEnvf(env: &mut Environment, target: GLenum, pname: GLenum, param: GLfloat) {
-    gl_trace(format!("TexEnvf pname={:#x} param={}", pname, param));
     with_ctx_and_mem(env, |gles, _mem| unsafe {
         gles.TexEnvf(target, pname, param)
     })
 }
 fn glTexEnvx(env: &mut Environment, target: GLenum, pname: GLenum, param: GLfixed) {
-    gl_trace(format!("TexEnvx pname={:#x} param={}", pname, param));
     with_ctx_and_mem(env, |gles, _mem| unsafe {
         gles.TexEnvx(target, pname, param)
     })
 }
 fn glTexEnvi(env: &mut Environment, target: GLenum, pname: GLenum, param: GLint) {
-    gl_trace(format!("TexEnvi pname={:#x} param={}", pname, param));
     with_ctx_and_mem(env, |gles, _mem| unsafe {
         gles.TexEnvi(target, pname, param)
     })
@@ -1313,7 +1266,6 @@ fn glRenderbufferStorageOES(
     width: GLsizei,
     height: GLsizei,
 ) {
-    gl_trace(format!("TEX RenderbufferStorageOES target={:#x} internalformat={:#x} width={:#x} height={:#x}", target, internalformat, width, height));
     // apply scale hack: give the app a larger framebuffer than it asked for
     let factor = env.options.scale_hack.get() as GLsizei;
     let (width, height) = (width * factor, height * factor);
