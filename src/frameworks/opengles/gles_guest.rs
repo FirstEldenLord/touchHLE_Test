@@ -321,7 +321,7 @@ fn gl_trace(line: String) {
         drop(v);
         items.sort_by(|a, b| b.1.cmp(&a.1));
         let mut msg = String::from("GL TRACE (state | seconds ago | count):");
-        for (l, t, c) in items.iter().take(40) {
+        for (l, t, c) in items.iter().filter(|e| e.0.starts_with("TEX ")).take(30).chain(items.iter().filter(|e| !e.0.starts_with("TEX ")).take(30)) {
             msg.push_str(&format!("\n{} | {}s ago | x{}", l, now - t, c));
         }
         panic!("{}", msg);
@@ -372,9 +372,11 @@ fn glCullFace(env: &mut Environment, mode: GLenum) {
     with_ctx_and_mem(env, |gles, _mem| unsafe { gles.CullFace(mode) })
 }
 fn glDepthFunc(env: &mut Environment, func: GLenum) {
+    gl_trace(format!("DepthFunc func={:#x}", func));
     with_ctx_and_mem(env, |gles, _mem| unsafe { gles.DepthFunc(func) })
 }
 fn glDepthMask(env: &mut Environment, flag: GLboolean) {
+    gl_trace(format!("DepthMask flag={:#x}", flag));
     with_ctx_and_mem(env, |gles, _mem| unsafe { gles.DepthMask(flag) })
 }
 fn glDepthRangef(env: &mut Environment, near: GLclampf, far: GLclampf) {
@@ -410,6 +412,7 @@ fn glShadeModel(env: &mut Environment, mode: GLenum) {
     with_ctx_and_mem(env, |gles, _mem| unsafe { gles.ShadeModel(mode) })
 }
 fn glScissor(env: &mut Environment, x: GLint, y: GLint, width: GLsizei, height: GLsizei) {
+    gl_trace(format!("Scissor x={:#x} y={:#x} width={:#x} height={:#x}", x, y, width, height));
     // apply scale hack: assume framebuffer's size is larger than the app thinks
     // and scale scissor appropriately
     let factor = env.options.scale_hack.get() as GLsizei;
@@ -779,6 +782,7 @@ fn glDrawElements(
 
 // Clearing
 fn glClear(env: &mut Environment, mask: GLbitfield) {
+    gl_trace(format!("Clear mask={:#x}", mask));
     with_ctx_and_mem(env, |gles, _mem| unsafe { gles.Clear(mask) });
 }
 fn glClearColor(
@@ -1087,6 +1091,7 @@ fn glTexImage2D(
     type_: GLenum,
     pixels: ConstVoidPtr,
 ) {
+    gl_trace(format!("TEX TexImage2D target={:#x} format={:#x} type_={:#x}", target, format, type_));
     with_ctx_and_mem(env, |gles, mem| unsafe {
         let pixels = if pixels.is_null() {
             std::ptr::null()
@@ -1144,6 +1149,7 @@ fn glCompressedTexImage2D(
     image_size: GLsizei,
     data: ConstVoidPtr,
 ) {
+    gl_trace(format!("TEX CompressedTexImage2D target={:#x} internalformat={:#x}", target, internalformat));
     with_ctx_and_mem(env, |gles, mem| unsafe {
         let data = mem
             .ptr_at(data.cast::<u8>(), image_size.try_into().unwrap())
