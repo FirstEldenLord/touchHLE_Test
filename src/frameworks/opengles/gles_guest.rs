@@ -25,6 +25,8 @@ use crate::objc::nil;
 use crate::Environment;
 
 use std::slice::from_raw_parts;
+use std::sync::{Mutex, OnceLock};
+use std::time::Instant;
 
 // These types are the same size in guest code (32-bit) and host code (64-bit).
 use crate::gles::gles11_raw::types::{
@@ -154,6 +156,7 @@ fn glGetError(env: &mut Environment) -> GLenum {
     })
 }
 fn glEnable(env: &mut Environment, cap: GLenum) {
+    gl_trace(format!("Enable {:#x}", cap));
     with_ctx_and_mem(env, |gles, _mem| {
         unsafe { gles.Enable(cap) };
     });
@@ -162,6 +165,7 @@ fn glIsEnabled(env: &mut Environment, cap: GLenum) -> GLboolean {
     with_ctx_and_mem(env, |gles, _mem| unsafe { gles.IsEnabled(cap) })
 }
 fn glDisable(env: &mut Environment, cap: GLenum) {
+    gl_trace(format!("Disable {:#x}", cap));
     with_ctx_and_mem(env, |gles, _mem| {
         unsafe { gles.Disable(cap) };
     });
@@ -297,13 +301,42 @@ fn glGetString(env: &mut Environment, name: GLenum) -> ConstPtr<GLubyte> {
 }
 
 // Other state manipulation
+static GL_TRACE_START: OnceLock<Instant> = OnceLock::new();
+static GL_TRACE: Mutex<Vec<(String, u64, u32)>> = Mutex::new(Vec::new());
+
+/// Temporary debugging aid: records unique GL state calls and panics with a
+/// summary after 90 seconds, so the result is visible on the crash screen.
+fn gl_trace(line: String) {
+    let start = *GL_TRACE_START.get_or_init(Instant::now);
+    let now = start.elapsed().as_secs();
+    let mut v = GL_TRACE.lock().unwrap();
+    if let Some(e) = v.iter_mut().find(|e| e.0 == line) {
+        e.1 = now;
+        e.2 += 1;
+    } else {
+        v.push((line, now, 1));
+    }
+    if now >= 90 {
+        let mut items = v.clone();
+        drop(v);
+        items.sort_by(|a, b| b.1.cmp(&a.1));
+        let mut msg = String::from("GL TRACE (state | seconds ago | count):");
+        for (l, t, c) in items.iter().take(40) {
+            msg.push_str(&format!("\n{} | {}s ago | x{}", l, now - t, c));
+        }
+        panic!("{}", msg);
+    }
+}
+
 fn glAlphaFunc(env: &mut Environment, func: GLenum, ref_: GLclampf) {
+    gl_trace(format!("AlphaFunc func={:#x} ref={}", func, ref_));
     with_ctx_and_mem(env, |gles, _mem| unsafe { gles.AlphaFunc(func, ref_) })
 }
 fn glAlphaFuncx(env: &mut Environment, func: GLenum, ref_: GLclampx) {
     with_ctx_and_mem(env, |gles, _mem| unsafe { gles.AlphaFuncx(func, ref_) })
 }
 fn glBlendFunc(env: &mut Environment, sfactor: GLenum, dfactor: GLenum) {
+    gl_trace(format!("BlendFunc src={:#x} dst={:#x}", sfactor, dfactor));
     with_ctx_and_mem(env, |gles, _mem| unsafe {
         gles.BlendFunc(sfactor, dfactor)
     })
@@ -318,6 +351,7 @@ fn glColorMask(
     blue: GLboolean,
     alpha: GLboolean,
 ) {
+    gl_trace(format!("ColorMask {} {} {} {}", red, green, blue, alpha));
     with_ctx_and_mem(env, |gles, _mem| unsafe {
         gles.ColorMask(red, green, blue, alpha)
     })
@@ -1157,16 +1191,19 @@ fn glCopyTexSubImage2D(
     })
 }
 fn glTexEnvf(env: &mut Environment, target: GLenum, pname: GLenum, param: GLfloat) {
+    gl_trace(format!("TexEnvf pname={:#x} param={}", pname, param));
     with_ctx_and_mem(env, |gles, _mem| unsafe {
         gles.TexEnvf(target, pname, param)
     })
 }
 fn glTexEnvx(env: &mut Environment, target: GLenum, pname: GLenum, param: GLfixed) {
+    gl_trace(format!("TexEnvx pname={:#x} param={}", pname, param));
     with_ctx_and_mem(env, |gles, _mem| unsafe {
         gles.TexEnvx(target, pname, param)
     })
 }
 fn glTexEnvi(env: &mut Environment, target: GLenum, pname: GLenum, param: GLint) {
+    gl_trace(format!("TexEnvi pname={:#x} param={}", pname, param));
     with_ctx_and_mem(env, |gles, _mem| unsafe {
         gles.TexEnvi(target, pname, param)
     })
