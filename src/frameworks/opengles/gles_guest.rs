@@ -316,7 +316,7 @@ fn gl_trace(line: String) {
     } else {
         v.push((line, now, 1));
     }
-    if now >= 90 {
+    if now >= 1_000_000 {
         let mut items = v.clone();
         drop(v);
         items.sort_by(|a, b| b.1.cmp(&a.1));
@@ -373,7 +373,7 @@ fn glCullFace(env: &mut Environment, mode: GLenum) {
 }
 fn glDepthFunc(env: &mut Environment, func: GLenum) {
     gl_trace(format!("DepthFunc func={:#x}", func));
-    with_ctx_and_mem(env, |gles, _mem| unsafe { gles.DepthFunc(func) })
+    with_ctx_and_mem(env, |gles, _mem| unsafe { gles.DepthFunc(if func == 0x204 { 0x206 } else { func }) })
 }
 fn glDepthMask(env: &mut Environment, flag: GLboolean) {
     gl_trace(format!("DepthMask flag={:#x}", flag));
