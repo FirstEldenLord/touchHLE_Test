@@ -316,12 +316,12 @@ fn gl_trace(line: String) {
     } else {
         v.push((line, now, 1));
     }
-    if now >= 1_000_000 {
+    if now >= 90 {
         let mut items = v.clone();
         drop(v);
         items.sort_by(|a, b| b.1.cmp(&a.1));
         let mut msg = String::from("GL TRACE (state | seconds ago | count):");
-        for (l, t, c) in items.iter().filter(|e| e.0.starts_with("TEX ")).take(30).chain(items.iter().filter(|e| !e.0.starts_with("TEX ")).take(30)) {
+        for (l, t, c) in items.iter().filter(|e| e.0.starts_with("TEX ")).take(30).chain(items.iter().filter(|e| !e.0.starts_with("TEX ") && !e.0.starts_with("Scissor")).take(30)) {
             msg.push_str(&format!("\n{} | {}s ago | x{}", l, now - t, c));
         }
         panic!("{}", msg);
@@ -373,16 +373,18 @@ fn glCullFace(env: &mut Environment, mode: GLenum) {
 }
 fn glDepthFunc(env: &mut Environment, func: GLenum) {
     gl_trace(format!("DepthFunc func={:#x}", func));
-    with_ctx_and_mem(env, |gles, _mem| unsafe { gles.DepthFunc(0x207) })
+    with_ctx_and_mem(env, |gles, _mem| unsafe { gles.DepthFunc(func) })
 }
 fn glDepthMask(env: &mut Environment, flag: GLboolean) {
     gl_trace(format!("DepthMask flag={:#x}", flag));
     with_ctx_and_mem(env, |gles, _mem| unsafe { gles.DepthMask(flag) })
 }
 fn glDepthRangef(env: &mut Environment, near: GLclampf, far: GLclampf) {
+    gl_trace(format!("DepthRangef near={:?} far={:?}", near, far));
     with_ctx_and_mem(env, |gles, _mem| unsafe { gles.DepthRangef(near, far) })
 }
 fn glDepthRangex(env: &mut Environment, near: GLclampx, far: GLclampx) {
+    gl_trace(format!("DepthRangex near={:#x} far={:#x}", near, far));
     with_ctx_and_mem(env, |gles, _mem| unsafe { gles.DepthRangex(near, far) })
 }
 fn glFrontFace(env: &mut Environment, mode: GLenum) {
@@ -808,9 +810,11 @@ fn glClearColorx(
     });
 }
 fn glClearDepthf(env: &mut Environment, depth: GLclampf) {
+    gl_trace(format!("ClearDepthf depth={:?}", depth));
     with_ctx_and_mem(env, |gles, _mem| unsafe { gles.ClearDepthf(depth) });
 }
 fn glClearDepthx(env: &mut Environment, depth: GLclampx) {
+    gl_trace(format!("ClearDepthx depth={:#x}", depth));
     with_ctx_and_mem(env, |gles, _mem| unsafe { gles.ClearDepthx(depth) });
 }
 fn glClearStencil(env: &mut Environment, s: GLint) {
@@ -1309,6 +1313,7 @@ fn glRenderbufferStorageOES(
     width: GLsizei,
     height: GLsizei,
 ) {
+    gl_trace(format!("TEX RenderbufferStorageOES target={:#x} internalformat={:#x} width={:#x} height={:#x}", target, internalformat, width, height));
     // apply scale hack: give the app a larger framebuffer than it asked for
     let factor = env.options.scale_hack.get() as GLsizei;
     let (width, height) = (width * factor, height * factor);
